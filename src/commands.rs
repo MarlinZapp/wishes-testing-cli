@@ -9,10 +9,11 @@ pub enum TestingCommand<'e> {
 }
 
 impl Runnable for TestingCommand<'_> {
-    fn run(&mut self) {
+    async fn run(&mut self) -> Result<(), reqwest::Error> {
         match self {
-            TestingCommand::Case(test_case) => test_case.run(),
-            TestingCommand::Generate(generate_command) => generate_command.run(),
+            TestingCommand::Case(test_case) => test_case.run().await?,
+            TestingCommand::Generate(generate_command) => generate_command.run().await?,
         }
+        Ok(())
     }
 }

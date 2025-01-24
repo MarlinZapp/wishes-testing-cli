@@ -1,8 +1,14 @@
 use clap_complete::Shell;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
+use rand::distributions::Alphanumeric;
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+use surrealdb::RecordId;
 
 use crate::runnable::Runnable;
 use std::path::Path;
-use std::process::{self, Command};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -11,8 +17,76 @@ pub struct TestCase<'e> {
     case: CaseNum,
     shell: &'e Shell,
     executable: &'e Path,
-    tiup_handle: Arc<Mutex<Option<std::process::Child>>>,
     surrealdb_handle: Arc<Mutex<Option<std::process::Child>>>,
+}
+
+pub enum CaseNum {
+    One(CaseOneArgs),
+    Two,
+}
+
+#[derive(Debug)]
+pub struct CaseOneArgs {
+    pub n: u32,
+}
+
+const URL_PREFIX: &str = "http://localhost:8080/api";
+
+impl<'e> Runnable for TestCase<'e> {
+    async fn run(&mut self) -> Result<(), reqwest::Error> {
+        let client = reqwest::Client::new();
+        self.before();
+        let start_time = std::time::Instant::now();
+        match &self.case {
+            CaseNum::One(args) => {
+                println!("Test case one: Register {} users.", args.n);
+                register_users(client, args.n as usize).await?;
+            }
+            CaseNum::Two => {
+                println!("Test case two");
+            }
+        }
+        let elapsed = start_time.elapsed();
+        println!(
+            "Test case completed in {},{} seconds.",
+            elapsed.as_secs(),
+            elapsed.as_millis() % 1000
+        );
+        self.after();
+        Ok(())
+    }
+}
+
+async fn register_users(client: reqwest::Client, n: usize) -> Result<(), reqwest::Error> {
+    let tasks = futures::stream::iter(0..n)
+        .map(|_| {
+            let client = client.clone();
+            async move {
+                let credentials = Credentials {
+                    name: generate_username(),
+                    pass: generate_password(),
+                };
+                let register_url = format!("{}/register", URL_PREFIX);
+                client
+                    .post(register_url)
+                    .header("Content-Type", "application/json")
+                    .json(&credentials)
+                    .send()
+                    .await
+            }
+        })
+        .buffer_unordered(16);
+
+    tasks
+        .for_each(|res| async {
+            match res {
+                Ok(_) => {}
+                Err(err) => eprintln!("Request failed: {}", err),
+            }
+        })
+        .await;
+
+    Ok(())
 }
 
 impl<'e> TestCase<'e> {
@@ -21,7 +95,6 @@ impl<'e> TestCase<'e> {
             case,
             shell,
             executable,
-            tiup_handle: Arc::new(Mutex::new(None)),
             surrealdb_handle: Arc::new(Mutex::new(None)),
         }
     }
@@ -29,20 +102,18 @@ impl<'e> TestCase<'e> {
     fn before(&mut self) {
         match self.shell {
             Shell::Zsh => {
-                self.tiup_handle = Arc::new(Mutex::new(Some(
-                    Command::new("zsh")
-                        .arg("-c")
-                        .arg("exec tiup playground --tag surrealdb --mode tikv-slim --pd 1 --kv 1")
-                        .spawn()
-                        .expect("failed to start tiup playground"),
-                )));
+                Command::new("zsh")
+                    .arg("-c")
+                    .arg("exec tiup playground --tag surrealdb --mode tikv-slim --pd 1 --kv 1")
+                    .spawn()
+                    .expect("failed to start tiup playground");
             }
             _ => {
                 eprintln!("Shell not yet supported for this test case.");
             }
         }
         // await tiup playground to be ready
-        thread::sleep(Duration::from_secs(7));
+        thread::sleep(Duration::from_secs(8));
         *self
             .surrealdb_handle
             .lock()
@@ -53,18 +124,19 @@ impl<'e> TestCase<'e> {
         );
         println!("Successfully started SurrealDB server!");
         // await backend to be ready
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(2));
 
         // Handle Ctrl+C and send SIGINT to tiup
-        let tiup_handle = Arc::clone(&self.tiup_handle);
         let surrealdb_handle = Arc::clone(&self.surrealdb_handle);
         ctrlc::set_handler(move || {
-            if let Some(ref mut handle) = *tiup_handle.lock().unwrap() {
-                eprintln!("Sending interrupt signal to tiup...");
-                handle.kill().expect("failed to send SIGINT to tiup");
-            } else {
-                eprintln!("tiup playground handle is None");
-            }
+            println!("Stopping tiup cluster!");
+            let pid = get_surreal_tiup_playground_pid().expect("failed to get tiup pid");
+            Command::new("kill")
+                .arg("-2")
+                .arg(pid.to_string())
+                .spawn()
+                .expect("failed to send SIGINT to tiup");
+            println!("Stopping surrealdb server!");
             if let Some(ref mut handle) = *surrealdb_handle.lock().unwrap() {
                 eprintln!("Sending interrupt signal to tiup...");
                 handle.kill().expect("failed to send SIGINT to tiup");
@@ -95,24 +167,24 @@ impl<'e> TestCase<'e> {
     }
 }
 
-pub enum CaseNum {
-    One,
-    Two,
+fn generate_username() -> String {
+    let random_chars: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect();
+
+    format!("test{}", random_chars)
 }
 
-impl<'e> Runnable for TestCase<'e> {
-    fn run(&mut self) {
-        self.before();
-        match self.case {
-            CaseNum::One => {
-                println!("Test case one");
-            }
-            CaseNum::Two => {
-                println!("Test case two");
-            }
-        }
-        self.after();
-    }
+fn generate_password() -> String {
+    let random_chars: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect();
+
+    format!("pass{}", random_chars)
 }
 
 fn get_surreal_tiup_playground_pid() -> Option<u32> {
@@ -139,4 +211,67 @@ fn get_surreal_tiup_playground_pid() -> Option<u32> {
 
     // If the component is not found
     None
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum WishStatus {
+    Submitted,
+    CreationInProgress,
+    InDelivery,
+    Delivered,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WishCreateRequest {
+    content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct InfoResponse {
+    info: String,
+    user: Option<User>,
+    session: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum UserRole {
+    Default,
+    Admin,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Credentials {
+    name: String,
+    pass: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WishContent {
+    content: String,
+    status: WishStatus,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Wish {
+    id: RecordId,
+    content: String,
+    status: WishStatus,
+    created_by: Option<RecordId>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WishWithUsername {
+    id: RecordId,
+    content: String,
+    status: WishStatus,
+    created_by: Option<RecordId>,
+    username: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct User {
+    id: RecordId,
+    name: String,
+    pass: String,
+    roles: Vec<UserRole>,
 }

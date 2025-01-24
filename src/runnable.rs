@@ -1,3 +1,3 @@
 pub trait Runnable {
-    fn run(&mut self);
+    async fn run(&mut self) -> Result<(), reqwest::Error>;
 }

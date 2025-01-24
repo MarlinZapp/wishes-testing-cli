@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::ValueHint;
 use clap_complete::Shell;
 use commands::{
-    case::{CaseNum, TestCase},
+    case::{CaseNum, CaseOneArgs, TestCase},
     generate::GenerateCommand,
     TestingCommand,
 };
@@ -14,7 +14,8 @@ use runnable::Runnable;
 mod commands;
 pub mod runnable;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     clap_complete::CompleteEnv::with_factory(cli)
         // Avoid tests snapshotting a path into `target/`
         .completer("testing")
@@ -29,9 +30,16 @@ fn main() {
     if let Some(case_matches) = matches.subcommand_matches("case") {
         if let Some(executable) = case_matches.get_one::<String>("executable") {
             let executable = Path::new(executable);
-            if let Some(_) = case_matches.subcommand_matches("one") {
+            if let Some(case_one_matches) = case_matches.subcommand_matches("one") {
+                let n_res = case_one_matches.get_one::<u32>("n");
+                let n;
+                if let Some(res) = n_res {
+                    n = res.clone();
+                } else {
+                    n = 1000;
+                }
                 command = Some(TestingCommand::Case(TestCase::new(
-                    CaseNum::One,
+                    CaseNum::One(CaseOneArgs { n }),
                     executable,
                     &shell,
                 )));
@@ -48,7 +56,10 @@ fn main() {
     }
 
     if let Some(mut command) = command {
-        command.run();
+        command
+            .run()
+            .await
+            .expect("{command} has not been executed successfully!");
     } else {
         eprintln!("Cannot recognize subcommand or no subcommands present.");
         return;
@@ -74,6 +85,17 @@ fn cli() -> clap::Command {
                     .short('e')
                     .help("The path to the executable starting the surrealdb server")
                     .value_hint(ValueHint::FilePath)])
-                .subcommands([clap::Command::new("one"), clap::Command::new("two")]),
+                .subcommands([
+                    clap::Command::new("one")
+                        .about("Run test case one: Register n users.")
+                        .arg(
+                            clap::Arg::new("n")
+                                .short('n')
+                                .help("Number of users to register. Defaults to 1000.")
+                                .value_parser(clap::value_parser!(u32))
+                                .default_value("1000"),
+                        ),
+                    clap::Command::new("two"),
+                ]),
         ])
 }

@@ -8,3 +8,9 @@ clap = { version = "4.5.27", features = ["derive"] }
 clap_complete = { version = "4.5.42", features = ["unstable-dynamic"] }
 clap_complete_command = "0.6.1"
 ctrlc = "3.4.5"
+reqwest = { version = "0.12.12", features = ["json"] }
+tokio = { version = "1.43.0", features = ["full"] }
+surrealdb = { version = "2.1.4" }
+serde = { version = "1.0.217", features = ["derive"] }
+rand = "0.8.5"
+futures = "0.3.31"

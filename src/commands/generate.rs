@@ -14,9 +14,10 @@ impl GenerateCommand {
 }
 
 impl Runnable for GenerateCommand {
-    fn run(&mut self) {
+    async fn run(&mut self) -> Result<(), reqwest::Error> {
         eprintln!("Generating completion file for {}...", self.shell);
         print_completions(self.shell, &mut self.command);
+        Ok(())
     }
 }
 

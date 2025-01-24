@@ -52,6 +52,7 @@ _arguments "${_arguments_options[@]}" : \
         case $line[1] in
             (one)
 _arguments "${_arguments_options[@]}" : \
+'-n+[Number of users to register. Defaults to 1000.]: :_default' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
@@ -159,7 +160,7 @@ _testing_commands() {
 (( $+functions[_testing__case_commands] )) ||
 _testing__case_commands() {
     local commands; commands=(
-'one:' \
+'one:Run test case one\: Register n users.' \
 'two:' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
@@ -168,7 +169,7 @@ _testing__case_commands() {
 (( $+functions[_testing__case__help_commands] )) ||
 _testing__case__help_commands() {
     local commands; commands=(
-'one:' \
+'one:Run test case one\: Register n users.' \
 'two:' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
@@ -216,7 +217,7 @@ _testing__help_commands() {
 (( $+functions[_testing__help__case_commands] )) ||
 _testing__help__case_commands() {
     local commands; commands=(
-'one:' \
+'one:Run test case one\: Register n users.' \
 'two:' \
     )
     _describe -t commands 'testing help case commands' commands "$@"
