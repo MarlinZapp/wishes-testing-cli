@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::ValueHint;
 use clap_complete::Shell;
 use commands::{
-    case::{CaseNum, CaseOneArgs, TestCase},
+    case::{CaseNum, CaseOneArgs, CaseTwoArgs, TestCase},
     generate::GenerateCommand,
     TestingCommand,
 };
@@ -31,7 +31,7 @@ async fn main() {
         if let Some(executable) = case_matches.get_one::<String>("executable") {
             let executable = Path::new(executable);
             if let Some(case_one_matches) = case_matches.subcommand_matches("one") {
-                let n_res = case_one_matches.get_one::<u32>("n");
+                let n_res = case_one_matches.get_one::<u32>("users");
                 let n;
                 if let Some(res) = n_res {
                     n = res.clone();
@@ -43,9 +43,16 @@ async fn main() {
                     executable,
                     &shell,
                 )));
-            } else if let Some(_) = case_matches.subcommand_matches("two") {
+            } else if let Some(case_two_matches) = case_matches.subcommand_matches("two") {
+                let n_wishes = case_two_matches.get_one::<u32>("wishes");
+                let n;
+                if let Some(res) = n_wishes {
+                    n = res.clone();
+                } else {
+                    n = 1000;
+                }
                 command = Some(TestingCommand::Case(TestCase::new(
-                    CaseNum::Two,
+                    CaseNum::Two(CaseTwoArgs { wishes: n }),
                     executable,
                     &shell,
                 )));
@@ -89,13 +96,23 @@ fn cli() -> clap::Command {
                     clap::Command::new("one")
                         .about("Run test case one: Register n users.")
                         .arg(
-                            clap::Arg::new("n")
+                            clap::Arg::new("users")
                                 .short('n')
+                                .long("n-users")
                                 .help("Number of users to register. Defaults to 1000.")
                                 .value_parser(clap::value_parser!(u32))
                                 .default_value("1000"),
                         ),
-                    clap::Command::new("two"),
+                    clap::Command::new("two")
+                        .about("Run test case one: Register 10 users and create n/10 wishes.")
+                        .arg(
+                            clap::Arg::new("wishes")
+                                .short('n')
+                                .long("n-wishes")
+                                .help("Number of wishes to create. Defaults to 1000.")
+                                .value_parser(clap::value_parser!(u32))
+                                .default_value("1000"),
+                        ),
                 ]),
         ])
 }

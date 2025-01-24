@@ -53,12 +53,15 @@ _arguments "${_arguments_options[@]}" : \
             (one)
 _arguments "${_arguments_options[@]}" : \
 '-n+[Number of users to register. Defaults to 1000.]: :_default' \
+'--n-users=[Number of users to register. Defaults to 1000.]: :_default' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
 ;;
 (two)
 _arguments "${_arguments_options[@]}" : \
+'-n+[Number of wishes to create. Defaults to 1000.]: :_default' \
+'--n-wishes=[Number of wishes to create. Defaults to 1000.]: :_default' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
@@ -161,7 +164,7 @@ _testing_commands() {
 _testing__case_commands() {
     local commands; commands=(
 'one:Run test case one\: Register n users.' \
-'two:' \
+'two:Run test case one\: Register 10 users and create n/10 wishes.' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'testing case commands' commands "$@"
@@ -170,7 +173,7 @@ _testing__case_commands() {
 _testing__case__help_commands() {
     local commands; commands=(
 'one:Run test case one\: Register n users.' \
-'two:' \
+'two:Run test case one\: Register 10 users and create n/10 wishes.' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'testing case help commands' commands "$@"
@@ -218,7 +221,7 @@ _testing__help_commands() {
 _testing__help__case_commands() {
     local commands; commands=(
 'one:Run test case one\: Register n users.' \
-'two:' \
+'two:Run test case one\: Register 10 users and create n/10 wishes.' \
     )
     _describe -t commands 'testing help case commands' commands "$@"
 }
