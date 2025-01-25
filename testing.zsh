@@ -15,8 +15,8 @@ _testing() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
-'-s+[Please select your active shell]: :(bash elvish fish powershell zsh)' \
-'--shell=[Please select your active shell]: :(bash elvish fish powershell zsh)' \
+'-s+[Here you can provide a shell if you don'\''t want to use the environment variable SHELL.]: :(bash elvish fish powershell zsh)' \
+'--shell=[Here you can provide a shell if you don'\''t want to use the environment variable SHELL.]: :(bash elvish fish powershell zsh)' \
 '-h[Print help]' \
 '--help[Print help]' \
 ":: :_testing_commands" \

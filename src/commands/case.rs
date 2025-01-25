@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 use surrealdb::RecordId;
 
 use crate::runnable::Runnable;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -191,6 +193,30 @@ async fn register_users(
 
 impl<'e> TestCase<'e> {
     pub fn new(case: CaseNum, executable: &'e Path, shell: &'e Shell) -> Self {
+        match std::env::consts::OS {
+            "linux" => {}
+            "macos" => {}
+            _ => {
+                panic!("tiup does not support the current OS. Please use a Linux or MacOS system.")
+            }
+        }
+        match Command::new(shell.to_string())
+            .arg("-c")
+            .arg("exec tiup --version")
+            .stdout(Stdio::piped())
+            .spawn()
+        {
+            Ok(_) => {}
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    println!("`tiup` was not found! Please install it and add it to the path of your shell!")
+                }
+                _ => {
+                    println!("Failed to start tiup playground: {}", e)
+                }
+            },
+        }
+
         Self {
             case,
             shell,
@@ -200,25 +226,34 @@ impl<'e> TestCase<'e> {
     }
 
     fn before(&mut self) {
-        match self.shell {
-            Shell::Zsh => {
-                Command::new("zsh")
-                    .arg("-c")
-                    .arg("exec tiup playground --tag surrealdb --mode tikv-slim --pd 1 --kv 1")
-                    .spawn()
-                    .expect("failed to start tiup playground");
-            }
-            _ => {
-                eprintln!("Shell not yet supported for this test case.");
+        let mut tiup = Command::new(self.shell.to_string())
+            .arg("-c")
+            .arg("exec tiup playground --tag surrealdb --mode tikv-slim --pd 1 --kv 1")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("failed to start tiup playground");
+        let stdout = tiup.stdout.take().expect("failed to capture stdout");
+        // Wrap stdout in a buffered reader for line-by-line reading
+        let reader = BufReader::new(stdout);
+        let mut port = "".to_owned();
+        for line in reader.lines() {
+            let line = line.expect("failed to read line");
+            println!("{}", line);
+            if line.contains("PD Endpoints") {
+                port += line.split_whitespace().last().unwrap();
+            };
+            if line.contains("Grafana:") {
+                break; // tiup startup complete
             }
         }
-        // await tiup playground to be ready
-        thread::sleep(Duration::from_secs(8));
+        thread::sleep(Duration::from_secs(1));
         *self
             .surrealdb_handle
             .lock()
             .expect("Failed to lock surrealdb handler") = Some(
             Command::new(self.executable)
+                .arg(port)
                 .spawn()
                 .expect("failed to start surrealdb executable"),
         );

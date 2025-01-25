@@ -23,10 +23,14 @@ async fn main() {
 
     let matches = cli().get_matches();
     let mut command = None;
-    let shell = matches
-        .get_one::<Shell>("shell")
-        .expect("Please provide a shell!")
-        .clone();
+    let shell;
+    if let Some(from_arg) = matches.get_one::<Shell>("shell") {
+        shell = from_arg.clone();
+    } else if let Some(from_env) = clap_complete::Shell::from_env() {
+        shell = from_env;
+    } else {
+        panic!("No SHELL provided in environment arguments, please provide the shell argument!");
+    }
     if let Some(case_matches) = matches.subcommand_matches("case") {
         if let Some(executable) = case_matches.get_one::<String>("executable") {
             let executable = Path::new(executable);
@@ -80,8 +84,7 @@ fn cli() -> clap::Command {
             .short('s')
             .long("shell")
             .value_parser(clap::value_parser!(Shell))
-            .required(true)
-            .help("Please select your active shell")])
+            .help("Here you can provide a shell if you don't want to use the environment variable SHELL.")])
         .subcommands([
             clap::Command::new("generate").about("Generate shell completions"),
             clap::Command::new("case")
