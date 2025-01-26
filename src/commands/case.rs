@@ -82,7 +82,7 @@ impl<'e> Runnable for TestCase<'e> {
                 println!("Start selecting...");
                 // restart timer because registration does not count in this test case
                 start_time = std::time::Instant::now();
-                get_wishes(&client, arc_jwts.get(0).unwrap()).await?;
+                get_wishes(&client, arc_jwts.get(0).unwrap(), 1).await?;
             }
             CaseNum::Four(args) => {
                 println!("Test case four: Select one wish {} times.", args.times);
@@ -94,9 +94,7 @@ impl<'e> Runnable for TestCase<'e> {
                 println!("Start selecting...");
                 // restart timer because registration does not count in this test case
                 start_time = std::time::Instant::now();
-                for _ in 0..args.times {
-                    get_wishes(&client, arc_jwts.get(0).unwrap()).await?;
-                }
+                get_wishes(&client, arc_jwts.get(0).unwrap(), args.times).await?;
             }
         }
         let elapsed = start_time.elapsed();
@@ -110,17 +108,23 @@ impl<'e> Runnable for TestCase<'e> {
     }
 }
 
-async fn get_wishes(client: &reqwest::Client, jwt: &String) -> Result<(), reqwest::Error> {
-    let wish_url = format!("{}/wishes?with_username=false", URL_PREFIX);
-    let res = client.get(wish_url).bearer_auth(jwt).send().await;
-    match res {
-        Ok(response) => {
-            if response.status() != 200 {
-                eprintln!("Failed to get wishes! {}", response.text().await.unwrap());
+async fn get_wishes(
+    client: &reqwest::Client,
+    jwt: &String,
+    times: u32,
+) -> Result<(), reqwest::Error> {
+    for _ in 0..times {
+        let wish_url = format!("{}/wishes?with_username=false", URL_PREFIX);
+        let res = client.get(wish_url).bearer_auth(jwt).send().await;
+        match res {
+            Ok(response) => {
+                if response.status() != 200 {
+                    eprintln!("Failed to get wishes! {}", response.text().await.unwrap());
+                }
             }
-        }
-        Err(err) => {
-            eprintln!("Failed to get wishes: {}", err);
+            Err(err) => {
+                eprintln!("Failed to get wishes: {}", err);
+            }
         }
     }
     Ok(())
