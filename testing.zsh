@@ -66,6 +66,22 @@ _arguments "${_arguments_options[@]}" : \
 '--help[Print help]' \
 && ret=0
 ;;
+(three)
+_arguments "${_arguments_options[@]}" : \
+'-n+[Number of wishes to get. Defaults to 1000.]: :_default' \
+'--n-wishes=[Number of wishes to get. Defaults to 1000.]: :_default' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(four)
+_arguments "${_arguments_options[@]}" : \
+'-n+[Number of times to get the wish. Defaults to 1000.]: :_default' \
+'--n-times=[Number of times to get the wish. Defaults to 1000.]: :_default' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
 (help)
 _arguments "${_arguments_options[@]}" : \
 ":: :_testing__case__help_commands" \
@@ -83,6 +99,14 @@ _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
 (two)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(three)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(four)
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
@@ -134,6 +158,14 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 && ret=0
 ;;
+(three)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(four)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
         esac
     ;;
 esac
@@ -165,18 +197,32 @@ _testing__case_commands() {
     local commands; commands=(
 'one:Run test case one\: Register n users.' \
 'two:Run test case one\: Register 10 users and create n/10 wishes.' \
+'three:Run test case three\: Get n wishes with one request.' \
+'four:Run test case four\: Get one wish n times.' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'testing case commands' commands "$@"
+}
+(( $+functions[_testing__case__four_commands] )) ||
+_testing__case__four_commands() {
+    local commands; commands=()
+    _describe -t commands 'testing case four commands' commands "$@"
 }
 (( $+functions[_testing__case__help_commands] )) ||
 _testing__case__help_commands() {
     local commands; commands=(
 'one:Run test case one\: Register n users.' \
 'two:Run test case one\: Register 10 users and create n/10 wishes.' \
+'three:Run test case three\: Get n wishes with one request.' \
+'four:Run test case four\: Get one wish n times.' \
 'help:Print this message or the help of the given subcommand(s)' \
     )
     _describe -t commands 'testing case help commands' commands "$@"
+}
+(( $+functions[_testing__case__help__four_commands] )) ||
+_testing__case__help__four_commands() {
+    local commands; commands=()
+    _describe -t commands 'testing case help four commands' commands "$@"
 }
 (( $+functions[_testing__case__help__help_commands] )) ||
 _testing__case__help__help_commands() {
@@ -188,6 +234,11 @@ _testing__case__help__one_commands() {
     local commands; commands=()
     _describe -t commands 'testing case help one commands' commands "$@"
 }
+(( $+functions[_testing__case__help__three_commands] )) ||
+_testing__case__help__three_commands() {
+    local commands; commands=()
+    _describe -t commands 'testing case help three commands' commands "$@"
+}
 (( $+functions[_testing__case__help__two_commands] )) ||
 _testing__case__help__two_commands() {
     local commands; commands=()
@@ -197,6 +248,11 @@ _testing__case__help__two_commands() {
 _testing__case__one_commands() {
     local commands; commands=()
     _describe -t commands 'testing case one commands' commands "$@"
+}
+(( $+functions[_testing__case__three_commands] )) ||
+_testing__case__three_commands() {
+    local commands; commands=()
+    _describe -t commands 'testing case three commands' commands "$@"
 }
 (( $+functions[_testing__case__two_commands] )) ||
 _testing__case__two_commands() {
@@ -222,13 +278,25 @@ _testing__help__case_commands() {
     local commands; commands=(
 'one:Run test case one\: Register n users.' \
 'two:Run test case one\: Register 10 users and create n/10 wishes.' \
+'three:Run test case three\: Get n wishes with one request.' \
+'four:Run test case four\: Get one wish n times.' \
     )
     _describe -t commands 'testing help case commands' commands "$@"
+}
+(( $+functions[_testing__help__case__four_commands] )) ||
+_testing__help__case__four_commands() {
+    local commands; commands=()
+    _describe -t commands 'testing help case four commands' commands "$@"
 }
 (( $+functions[_testing__help__case__one_commands] )) ||
 _testing__help__case__one_commands() {
     local commands; commands=()
     _describe -t commands 'testing help case one commands' commands "$@"
+}
+(( $+functions[_testing__help__case__three_commands] )) ||
+_testing__help__case__three_commands() {
+    local commands; commands=()
+    _describe -t commands 'testing help case three commands' commands "$@"
 }
 (( $+functions[_testing__help__case__two_commands] )) ||
 _testing__help__case__two_commands() {

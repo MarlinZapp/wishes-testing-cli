@@ -10,7 +10,6 @@ use crate::runnable::Runnable;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -25,6 +24,8 @@ pub struct TestCase<'e> {
 pub enum CaseNum {
     One(CaseOneArgs),
     Two(CaseTwoArgs),
+    Three(CaseThreeArgs),
+    Four(CaseFourArgs),
 }
 
 #[derive(Debug)]
@@ -37,13 +38,23 @@ pub struct CaseTwoArgs {
     pub wishes: u32,
 }
 
+#[derive(Debug)]
+pub struct CaseThreeArgs {
+    pub wishes: u32,
+}
+
+#[derive(Debug)]
+pub struct CaseFourArgs {
+    pub times: u32,
+}
+
 const URL_PREFIX: &str = "http://localhost:8080/api";
 
 impl<'e> Runnable for TestCase<'e> {
     async fn run(&mut self) -> Result<(), reqwest::Error> {
         let client = reqwest::Client::new();
         self.before();
-        let start_time = std::time::Instant::now();
+        let mut start_time = std::time::Instant::now();
         match &self.case {
             CaseNum::One(args) => {
                 println!("Test case one: Register {} users.", args.n);
@@ -51,12 +62,41 @@ impl<'e> Runnable for TestCase<'e> {
             }
             CaseNum::Two(args) => {
                 println!(
-                    "Test case two. Register 10 users and create {} wishes each.",
+                    "Test case two: Register 10 users and create {} wishes each.",
                     args.wishes / 10
                 );
                 let credentials = register_users(&client, 10).await?;
                 let jwts = login_users(&client, &credentials).await?;
                 create_wishes(&client, Arc::new(jwts), args.wishes).await?;
+            }
+            CaseNum::Three(args) => {
+                println!(
+                    "Test case three: Select {} wishes in one request.",
+                    args.wishes
+                );
+                println!("Registering and creating wishes...");
+                let credentials = register_users(&client, 1).await?;
+                let jwts = login_users(&client, &credentials).await?;
+                let arc_jwts = Arc::new(jwts);
+                create_wishes(&client, Arc::clone(&arc_jwts), args.wishes).await?;
+                println!("Start selecting...");
+                // restart timer because registration does not count in this test case
+                start_time = std::time::Instant::now();
+                get_wishes(&client, arc_jwts.get(0).unwrap()).await?;
+            }
+            CaseNum::Four(args) => {
+                println!("Test case four: Select one wish {} times.", args.times);
+                println!("Registering user and creating wish...");
+                let credentials = register_users(&client, 1).await?;
+                let jwts = login_users(&client, &credentials).await?;
+                let arc_jwts = Arc::new(jwts);
+                create_wishes(&client, Arc::clone(&arc_jwts), 1).await?;
+                println!("Start selecting...");
+                // restart timer because registration does not count in this test case
+                start_time = std::time::Instant::now();
+                for _ in 0..args.times {
+                    get_wishes(&client, arc_jwts.get(0).unwrap()).await?;
+                }
             }
         }
         let elapsed = start_time.elapsed();
@@ -70,10 +110,27 @@ impl<'e> Runnable for TestCase<'e> {
     }
 }
 
+async fn get_wishes(client: &reqwest::Client, jwt: &String) -> Result<(), reqwest::Error> {
+    let wish_url = format!("{}/wishes?with_username=false", URL_PREFIX);
+    let res = client.get(wish_url).bearer_auth(jwt).send().await;
+    match res {
+        Ok(response) => {
+            if response.status() != 200 {
+                eprintln!("Failed to get wishes! {}", response.text().await.unwrap());
+            }
+        }
+        Err(err) => {
+            eprintln!("Failed to get wishes: {}", err);
+        }
+    }
+    Ok(())
+}
+
+/// For each user represented by a jwt, create n / len(jwts) wishes
 async fn create_wishes(
     client: &reqwest::Client,
     jwts: Arc<Vec<String>>,
-    wishes: u32,
+    n_wishes: u32,
 ) -> Result<(), reqwest::Error> {
     let mut tasks = FuturesUnordered::new();
 
@@ -81,7 +138,7 @@ async fn create_wishes(
         let jwts = Arc::clone(&jwts);
         let client = client.clone(); // Clone the client for each task
         tasks.push(tokio::spawn(async move {
-            for _ in 0..wishes / jwts.len() as u32 {
+            for _ in 0..n_wishes / jwts.len() as u32 {
                 let wish = WishCreateRequest {
                     content: generate_wish(),
                 };

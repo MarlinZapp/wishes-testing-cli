@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::ValueHint;
 use clap_complete::Shell;
 use commands::{
-    case::{CaseNum, CaseOneArgs, CaseTwoArgs, TestCase},
+    case::{CaseFourArgs, CaseNum, CaseOneArgs, CaseThreeArgs, CaseTwoArgs, TestCase},
     generate::GenerateCommand,
     TestingCommand,
 };
@@ -57,6 +57,32 @@ async fn main() {
                 }
                 command = Some(TestingCommand::Case(TestCase::new(
                     CaseNum::Two(CaseTwoArgs { wishes: n }),
+                    executable,
+                    &shell,
+                )));
+            } else if let Some(case_two_matches) = case_matches.subcommand_matches("three") {
+                let n_wishes = case_two_matches.get_one::<u32>("wishes");
+                let n;
+                if let Some(res) = n_wishes {
+                    n = res.clone();
+                } else {
+                    n = 1000;
+                }
+                command = Some(TestingCommand::Case(TestCase::new(
+                    CaseNum::Three(CaseThreeArgs { wishes: n }),
+                    executable,
+                    &shell,
+                )));
+            } else if let Some(case_two_matches) = case_matches.subcommand_matches("four") {
+                let n_times = case_two_matches.get_one::<u32>("times");
+                let n;
+                if let Some(res) = n_times {
+                    n = res.clone();
+                } else {
+                    n = 1000;
+                }
+                command = Some(TestingCommand::Case(TestCase::new(
+                    CaseNum::Four(CaseFourArgs { times: n }),
                     executable,
                     &shell,
                 )));
@@ -116,6 +142,26 @@ fn cli() -> clap::Command {
                                 .value_parser(clap::value_parser!(u32))
                                 .default_value("1000"),
                         ),
-                ]),
+                    clap::Command::new("three")
+                        .about("Run test case three: Get n wishes with one request.")
+                        .arg(
+                            clap::Arg::new("wishes")
+                                .short('n')
+                                .long("n-wishes")
+                                .help("Number of wishes to get. Defaults to 1000.")
+                                .value_parser(clap::value_parser!(u32))
+                                .default_value("1000"),
+                        ),
+                    clap::Command::new("four")
+                        .about("Run test case four: Get one wish n times.")
+                        .arg(
+                            clap::Arg::new("times")
+                                .short('n')
+                                .long("n-times")
+                                .help("Number of times to get the wish. Defaults to 1000.")
+                                .value_parser(clap::value_parser!(u32))
+                                .default_value("1000"),
+                        ),
+                    ]),
         ])
 }

@@ -21,20 +21,32 @@ _testing() {
             testing,help)
                 cmd="testing__help"
                 ;;
+            testing__case,four)
+                cmd="testing__case__four"
+                ;;
             testing__case,help)
                 cmd="testing__case__help"
                 ;;
             testing__case,one)
                 cmd="testing__case__one"
                 ;;
+            testing__case,three)
+                cmd="testing__case__three"
+                ;;
             testing__case,two)
                 cmd="testing__case__two"
+                ;;
+            testing__case__help,four)
+                cmd="testing__case__help__four"
                 ;;
             testing__case__help,help)
                 cmd="testing__case__help__help"
                 ;;
             testing__case__help,one)
                 cmd="testing__case__help__one"
+                ;;
+            testing__case__help,three)
+                cmd="testing__case__help__three"
                 ;;
             testing__case__help,two)
                 cmd="testing__case__help__two"
@@ -48,8 +60,14 @@ _testing() {
             testing__help,help)
                 cmd="testing__help__help"
                 ;;
+            testing__help__case,four)
+                cmd="testing__help__case__four"
+                ;;
             testing__help__case,one)
                 cmd="testing__help__case__one"
+                ;;
+            testing__help__case,three)
+                cmd="testing__help__case__three"
                 ;;
             testing__help__case,two)
                 cmd="testing__help__case__two"
@@ -83,7 +101,7 @@ _testing() {
             return 0
             ;;
         testing__case)
-            opts="-e -h --surrealdb-executable --help one two help"
+            opts="-e -h --surrealdb-executable --help one two three four help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -126,9 +144,45 @@ _testing() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        testing__case__help)
-            opts="one two help"
+        testing__case__four)
+            opts="-n -h --n-times --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --n-times)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -n)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        testing__case__help)
+            opts="one two three four help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        testing__case__help__four)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
@@ -168,6 +222,20 @@ _testing() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        testing__case__help__three)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         testing__case__help__two)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
@@ -190,6 +258,28 @@ _testing() {
             fi
             case "${prev}" in
                 --n-users)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -n)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        testing__case__three)
+            opts="-n -h --n-wishes --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                --n-wishes)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
@@ -255,7 +345,7 @@ _testing() {
             return 0
             ;;
         testing__help__case)
-            opts="one two"
+            opts="one two three four"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -268,7 +358,35 @@ _testing() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        testing__help__case__four)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         testing__help__case__one)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        testing__help__case__three)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 4 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
